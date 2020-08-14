@@ -19,25 +19,33 @@ var (
 	destination [bufSize]byte
 )
 
+var (
+	dbg5 = machine.D5
+	dbg6 = machine.D4
+)
+
+func initDbg() {
+	dbg5.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	dbg6.Configure(machine.PinConfig{Mode: machine.PinOutput})
+}
+
 func main() {
+	initDbg()
+
 	led := machine.LED
 	led.Configure(machine.PinConfig{Mode: machine.PinOutput})
-
-	d5 := machine.D5
-	d5.Configure(machine.PinConfig{Mode: machine.PinOutput})
-
-	d6 := machine.D6
-	d6.Configure(machine.PinConfig{Mode: machine.PinOutput})
 
 	// wait for USB-CDC
 	time.Sleep(5 * time.Second)
 
 	fmt.Printf("- %b\r\n", sam.DMAC.CHANNEL[0].CHSTATUS.Get())
 	d := dma.NewDMA(func(d dma.DMA) {
-		d6.Toggle()
+		dbg6.Toggle()
 		d.Trigger()
 		return
 	})
+	d.SetTrigger(0) // Only software/event triggers
+	d.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_TRANSACTION)
 
 	// Only software/event triggers
 	//d.SetTrigger(0)
@@ -94,8 +102,8 @@ func main() {
 	fmt.Printf("before %v %v\r\n", destination[:8], destination[8:16])
 	fmt.Printf("INTSTATUS %08X\r\n", sam.DMAC.INTSTATUS.Get())
 	fmt.Printf("INTPEND %04X\r\n", sam.DMAC.INTPEND.Get())
-	d5.High()
-	d6.Toggle()
+	dbg5.High()
+	dbg6.Toggle()
 	d.Trigger()
 	fmt.Printf("INTPEND %04X\r\n", sam.DMAC.INTPEND.Get())
 	fmt.Printf("%b\r\n", sam.DMAC.CHANNEL[0].CHSTATUS.Get())
@@ -110,20 +118,20 @@ func main() {
 	//time.Sleep(1 * time.Second)
 	fmt.Printf("%b\r\n", sam.DMAC.CHANNEL[0].CHSTATUS.Get())
 	//d.Wait()
-	d5.Low()
+	dbg5.Low()
 	//time.Sleep(5 * time.Second)
 	fmt.Printf("after  %v %v\r\n", destination[:8], destination[8:16])
 	fmt.Printf("%b\r\n", sam.DMAC.CHANNEL[0].CHSTATUS.Get())
 
-	for i := range source {
-		destination[i] = 0
-	}
+	//for i := range source {
+	//	destination[i] = 0
+	//}
 
-	//d5.High()
+	dbg5.High()
 	for i := range source {
 		destination[i] = source[i]
 	}
-	//d5.Low()
+	dbg5.Low()
 	fmt.Printf("after2 %v %v\r\n", destination[:8], destination[8:16])
 
 	for {
