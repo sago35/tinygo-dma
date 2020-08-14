@@ -5,6 +5,7 @@ package dma
 import (
 	"device/sam"
 	"fmt"
+	"machine"
 	"runtime/interrupt"
 	"unsafe"
 )
@@ -13,6 +14,7 @@ type DMA struct {
 	Channel       uint8
 	triggerSource uint8
 	triggerAction uint8
+	wait          chan bool
 }
 
 type DMADescriptor struct {
@@ -41,6 +43,17 @@ var (
 	dmaCallbacks [maxDMAchannels]func(DMA)
 )
 
+var (
+	dbg5 = machine.D5
+	dbg6 = machine.D4
+)
+
+func init() {
+	for i := range DMAChannels {
+		DMAChannels[i].wait = make(chan bool, 1)
+	}
+}
+
 func handleDMACInterrupt(intr interrupt.Interrupt) {
 	//fmt.Printf("interrupt %#v %04X\r\n", intr, sam.DMAC.INTPEND.Get())
 	//susp := sam.DMAC.INTPEND.HasBits(sam.DMAC_INTPEND_SUSP_Pos)
@@ -48,6 +61,10 @@ func handleDMACInterrupt(intr interrupt.Interrupt) {
 	//terr := sam.DMAC.INTPEND.HasBits(sam.DMAC_INTPEND_TERR_Pos)
 	//channel := (sam.DMAC.INTPEND.Get() >> sam.DMAC_INTPEND_ID_Pos) & sam.DMAC_INTPEND_ID_Msk
 	channel := (sam.DMAC.INTPEND.Get() >> sam.DMAC_INTPEND_ID_Pos) & sam.DMAC_INTPEND_ID_Msk
+
+	select {
+	case DMAChannels[channel].wait <- true:
+	}
 
 	if sam.DMAC.CHANNEL[channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_SUSP) {
 		sam.DMAC.CHANNEL[channel].CHINTFLAG.Set(sam.DMAC_CHANNEL_CHINTFLAG_SUSP)
@@ -106,6 +123,7 @@ func NewDMA(callback func(DMA)) *DMA {
 	return &dma
 }
 
+// SetTrigger sets trigger source of Channel Control A register
 func (dma *DMA) SetTrigger(triggerSource uint8) error {
 	if maxDMATriggerSources <= triggerSource {
 		return fmt.Errorf("trigger source must be smaller than 32")
@@ -128,6 +146,87 @@ func (dma *DMA) SetTriggerAction(triggerAction uint8) error {
 	//
 	dma.triggerAction = triggerAction
 	return nil
+}
+
+func (dma *DMA) Start() {
+	// Reset channel.
+	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.ClearBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE)
+	for sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.HasBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE) {
+	}
+
+	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.SetBits(sam.DMAC_CHANNEL_CHCTRLA_SWRST)
+	for sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.HasBits(sam.DMAC_CHANNEL_CHCTRLA_SWRST) {
+	}
+
+	// Configure channel.
+	sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_SUSP | sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
+	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
+
+	sam.DMAC.CHANNEL[dma.Channel].CHPRILVL.Set(0)
+
+	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.Set((uint32(dma.triggerSource) << sam.DMAC_CHANNEL_CHCTRLA_TRIGSRC_Pos) |
+		(uint32(dma.triggerAction) << sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_Pos) |
+		(sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_SINGLE << sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_Pos))
+
+	//sam.DMAC.CHANNEL[dma.Channel].CHCTRLB.Set(sam.DMAC_CHANNEL_CHCTRLB_CMD_RESUME << sam.DMAC_CHANNEL_CHCTRLB_CMD_Pos)
+
+	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_SUSP | sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
+	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_TCMPL)
+
+	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.SetBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE)
+}
+
+func (dma DMA) Trigger() {
+	sam.DMAC.SWTRIGCTRL.SetBits(1 << dma.Channel)
+}
+
+func (dma DMA) SetAction() {
+	// block beat transaction ...
+}
+
+func (dma DMA) SetDescriptor(desc DMADescriptor) {
+	DmaDescriptorSection[dma.Channel] = desc
+}
+
+func (dma DMA) Wait() {
+	//for !sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL) {
+	//}
+	//sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.SetBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL)
+	<-DMAChannels[dma.Channel].wait
+}
+
+type DMADescriptorHelper struct {
+	StepSize uint8          // Address Increment Step Size : 1, 2, 4, 8, 16, 32, 64, 128
+	StepSel  uint8          // Step Selection : 0=DST, 1=SRC
+	DstInc   bool           // Destination Address Increment Enable
+	SrcInc   bool           // Source Address Increment Enable
+	BeatSize uint8          // Beat Size : 1=BYTE, 2:HWORD, 4:WORD
+	BlockAct uint8          // Block Action : 0=NOACT, 1=INT, 2=SUSPEND, 3=BOTH
+	EvoSel   uint8          // Event Output Selection : 0=DISABLE, 1=BLOCK, 3:BEAT
+	Valid    bool           // Descriptor Valid
+	Length   uint32         // Length is `BTCNT * BeatSize` or `BTCNT * BeatSize * StepSize`
+	SrcAddr  unsafe.Pointer // Block Transfer Source Address
+	DstAddr  unsafe.Pointer // Block Transfer Destination Address
+	DescAddr unsafe.Pointer // Next Descriptor Address (must be 128-bit aligned)
+}
+
+func GetDMADescriptorHelper() *DMADescriptorHelper {
+	ret := &DMADescriptorHelper{
+		StepSize: 1,
+		StepSel:  0,
+		DstInc:   false,
+		SrcInc:   false,
+		BeatSize: 1,
+		BlockAct: 0,
+		EvoSel:   0,
+		Valid:    true,
+		Length:   0,
+		SrcAddr:  unsafe.Pointer(nil),
+		DstAddr:  unsafe.Pointer(nil),
+		DescAddr: unsafe.Pointer(nil),
+	}
+
+	return ret
 }
 
 func (dma DMA) AddDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize uint8, srcInc, dstInc bool, stepSize uint8, stepSrc bool, size uint16) {
@@ -213,86 +312,6 @@ func (dma DMA) AddDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize ui
 		}
 		DmaDescriptorSection[dma.Channel].dstaddr = uint32(uintptr(dst) + uintptr((size)<<ss))
 	}
-}
-
-func (dma DMA) Start() {
-	// Reset channel.
-	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.ClearBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE)
-	for sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.HasBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE) {
-	}
-
-	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.SetBits(sam.DMAC_CHANNEL_CHCTRLA_SWRST)
-	for sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.HasBits(sam.DMAC_CHANNEL_CHCTRLA_SWRST) {
-	}
-
-	// Configure channel.
-	sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_SUSP | sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
-	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
-
-	sam.DMAC.CHANNEL[dma.Channel].CHPRILVL.Set(0)
-
-	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.Set((uint32(dma.triggerSource) << sam.DMAC_CHANNEL_CHCTRLA_TRIGSRC_Pos) |
-		(uint32(dma.triggerAction) << sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_Pos) |
-		(sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_SINGLE << sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_Pos))
-
-	//sam.DMAC.CHANNEL[dma.Channel].CHCTRLB.Set(sam.DMAC_CHANNEL_CHCTRLB_CMD_RESUME << sam.DMAC_CHANNEL_CHCTRLB_CMD_Pos)
-
-	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_SUSP | sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
-	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_TCMPL)
-
-	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.SetBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE)
-}
-
-func (dma DMA) Trigger() {
-	sam.DMAC.SWTRIGCTRL.SetBits(1 << dma.Channel)
-}
-
-func (dma DMA) SetAction() {
-	// block beat transaction ...
-}
-
-func (dma DMA) SetDescriptor(desc DMADescriptor) {
-	DmaDescriptorSection[dma.Channel] = desc
-}
-
-func (dma DMA) Wait() {
-	for !sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL) {
-	}
-	sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.SetBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL)
-}
-
-type DMADescriptorHelper struct {
-	StepSize uint8          // Address Increment Step Size : 1, 2, 4, 8, 16, 32, 64, 128
-	StepSel  uint8          // Step Selection : 0=DST, 1=SRC
-	DstInc   bool           // Destination Address Increment Enable
-	SrcInc   bool           // Source Address Increment Enable
-	BeatSize uint8          // Beat Size : 1=BYTE, 2:HWORD, 4:WORD
-	BlockAct uint8          // Block Action : 0=NOACT, 1=INT, 2=SUSPEND, 3=BOTH
-	EvoSel   uint8          // Event Output Selection : 0=DISABLE, 1=BLOCK, 3:BEAT
-	Valid    bool           // Descriptor Valid
-	Length   uint32         // Length is `BTCNT * BeatSize` or `BTCNT * BeatSize * StepSize`
-	SrcAddr  unsafe.Pointer // Block Transfer Source Address
-	DstAddr  unsafe.Pointer // Block Transfer Destination Address
-	DescAddr unsafe.Pointer // Next Descriptor Address (must be 128-bit aligned)
-}
-
-func GetDMADescriptorHelper() *DMADescriptorHelper {
-	ret := &DMADescriptorHelper{
-		StepSize: 1,
-		StepSel:  0,
-		DstInc:   false,
-		SrcInc:   false,
-		BeatSize: 1,
-		BlockAct: 0,
-		EvoSel:   0,
-		Valid:    true,
-		Length:   0,
-		SrcAddr:  unsafe.Pointer(nil),
-		DstAddr:  unsafe.Pointer(nil),
-		DescAddr: unsafe.Pointer(nil),
-	}
-
-	return ret
 }
 
 func (dma DMA) NewDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize uint8, srcInc, dstInc bool, stepSize uint8, stepSrc bool, size uint16) *DMADescriptor {
