@@ -10,7 +10,9 @@ import (
 )
 
 type DMA struct {
-	Channel uint8
+	Channel       uint8
+	triggerSource uint8
+	triggerAction uint8
 }
 
 type DMADescriptor struct {
@@ -80,8 +82,8 @@ func NewDMA(callback func(DMA)) *DMA {
 
 		sam.DMAC.BASEADDR.Set(uint32(uintptr(unsafe.Pointer(&DmaDescriptorSection))))
 		sam.DMAC.WRBADDR.Set(uint32(uintptr(unsafe.Pointer(&dmaDescriptorWritebackSection))))
-		fmt.Printf("BASE %08X\r\n", uint32(uintptr(unsafe.Pointer(&DmaDescriptorSection))))
-		fmt.Printf("WRBA %08X\r\n", uint32(uintptr(unsafe.Pointer(&dmaDescriptorWritebackSection))))
+		//fmt.Printf("BASE %08X\r\n", uint32(uintptr(unsafe.Pointer(&DmaDescriptorSection))))
+		//fmt.Printf("WRBA %08X\r\n", uint32(uintptr(unsafe.Pointer(&dmaDescriptorWritebackSection))))
 
 		sam.DMAC.CTRL.SetBits(sam.DMAC_CTRL_LVLEN0 | sam.DMAC_CTRL_LVLEN1 | sam.DMAC_CTRL_LVLEN2 | sam.DMAC_CTRL_LVLEN3)
 
@@ -104,12 +106,27 @@ func NewDMA(callback func(DMA)) *DMA {
 	return &dma
 }
 
-func (dma DMA) SetTrigger(triggerSource uint8) error {
+func (dma *DMA) SetTrigger(triggerSource uint8) error {
 	if maxDMATriggerSources <= triggerSource {
 		return fmt.Errorf("trigger source must be smaller than 32")
 	}
-	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.ReplaceBits(uint32(triggerSource), sam.DMAC_CHANNEL_CHCTRLA_TRIGSRC_Msk, sam.DMAC_CHANNEL_CHCTRLA_TRIGSRC_Pos)
+	dma.triggerSource = triggerSource
+	return nil
+}
 
+// SetTriggerAction sets trigger action of Channel Control A register.
+//   sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BLOCK
+//     0x0 : BLOCK       : One trigger required for each block transfer
+//   sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BURST
+//     0x2 : BURST       : One trigger required for each burst transfer
+//   sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_TRANSACTION
+//     0x3 : TRANSACTION : One trigger required for each transaction
+func (dma *DMA) SetTriggerAction(triggerAction uint8) error {
+	if 0x03 <= triggerAction {
+		return fmt.Errorf("trigger action must be smaller than 4")
+	}
+	//
+	dma.triggerAction = triggerAction
 	return nil
 }
 
@@ -182,13 +199,20 @@ func (dma DMA) AddDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize ui
 	if stepSrc {
 		// STEPSEL == SRC
 		DmaDescriptorSection[dma.Channel].srcaddr = uint32(uintptr(src) + uintptr((size)<<ss))
-		DmaDescriptorSection[dma.Channel].dstaddr = uint32(uintptr(dst) + uintptr(size))
+		if dstInc {
+			DmaDescriptorSection[dma.Channel].dstaddr = uint32(uintptr(dst) + uintptr(size))
+		} else {
+			DmaDescriptorSection[dma.Channel].dstaddr = uint32(uintptr(dst))
+		}
 	} else {
 		// STEPSEL == DST
-		DmaDescriptorSection[dma.Channel].srcaddr = uint32(uintptr(src) + uintptr(size))
+		if srcInc {
+			DmaDescriptorSection[dma.Channel].srcaddr = uint32(uintptr(src) + uintptr(size))
+		} else {
+			DmaDescriptorSection[dma.Channel].srcaddr = uint32(uintptr(src))
+		}
 		DmaDescriptorSection[dma.Channel].dstaddr = uint32(uintptr(dst) + uintptr((size)<<ss))
 	}
-	fmt.Printf("%#v\r\n", DmaDescriptorSection[dma.Channel])
 }
 
 func (dma DMA) Start() {
@@ -207,14 +231,9 @@ func (dma DMA) Start() {
 
 	sam.DMAC.CHANNEL[dma.Channel].CHPRILVL.Set(0)
 
-	// for block
-	//sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.Set((sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BLOCK << sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_Pos) | (sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_SINGLE << sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_Pos))
-
-	// for transaction
-	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.Set(
-		(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BLOCK << sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_Pos) |
-			(sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_SINGLE << sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_Pos))
-	//(sam.DMAC_CHANNEL_CHCTRLA_RUNSTDBY) |
+	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.Set((uint32(dma.triggerSource) << sam.DMAC_CHANNEL_CHCTRLA_TRIGSRC_Pos) |
+		(uint32(dma.triggerAction) << sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_Pos) |
+		(sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_SINGLE << sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_Pos))
 
 	//sam.DMAC.CHANNEL[dma.Channel].CHCTRLB.Set(sam.DMAC_CHANNEL_CHCTRLB_CMD_RESUME << sam.DMAC_CHANNEL_CHCTRLB_CMD_Pos)
 
