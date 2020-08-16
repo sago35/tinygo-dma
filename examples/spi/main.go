@@ -102,7 +102,7 @@ func main() {
 	//	}
 
 	from := []byte{0, 1, 2, 3, 4, 5, 6, 7}
-	d := dma.NewDMA(func(d dma.DMA) {
+	d := dma.NewDMA(func(d *dma.DMA) {
 		dbg5.Toggle()
 		//fmt.Printf("done\r\n")
 		return
@@ -120,7 +120,7 @@ func main() {
 	)
 
 	to := make([]byte, 8)
-	d2 := dma.NewDMA(func(d dma.DMA) {
+	d2 := dma.NewDMA(func(d *dma.DMA) {
 		dbg6.Toggle()
 		return
 	})

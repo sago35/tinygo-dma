@@ -39,7 +39,7 @@ func main() {
 	time.Sleep(5 * time.Second)
 
 	fmt.Printf("- %b\r\n", sam.DMAC.CHANNEL[0].CHSTATUS.Get())
-	d := dma.NewDMA(func(d dma.DMA) {
+	d := dma.NewDMA(func(d *dma.DMA) {
 		dbg6.Toggle()
 		d.Trigger()
 		return

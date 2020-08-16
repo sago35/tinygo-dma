@@ -40,7 +40,7 @@ var dmaDescriptorWritebackSection [dmaDescriptors]DMADescriptor
 var (
 	nextDMAIndex uint8
 	DMAChannels  [maxDMAchannels]DMA
-	dmaCallbacks [maxDMAchannels]func(DMA)
+	dmaCallbacks [maxDMAchannels]func(*DMA)
 )
 
 var (
@@ -71,14 +71,14 @@ func handleDMACInterrupt(intr interrupt.Interrupt) {
 	}
 	if sam.DMAC.CHANNEL[channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL) {
 		sam.DMAC.CHANNEL[channel].CHINTFLAG.Set(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL)
-		dmaCallbacks[channel](DMAChannels[channel])
+		dmaCallbacks[channel](&DMAChannels[channel])
 	}
 	if sam.DMAC.CHANNEL[channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_TERR) {
 		sam.DMAC.CHANNEL[channel].CHINTFLAG.Set(sam.DMAC_CHANNEL_CHINTFLAG_TERR)
 	}
 }
 
-func NewDMA(callback func(DMA)) *DMA {
+func NewDMA(callback func(*DMA)) *DMA {
 	if maxDMAchannels <= nextDMAIndex {
 		return nil
 	}
@@ -112,7 +112,7 @@ func NewDMA(callback func(DMA)) *DMA {
 
 	}
 
-	dma := DMAChannels[nextDMAIndex]
+	dma := &DMAChannels[nextDMAIndex]
 	dma.Channel = nextDMAIndex
 	dmaCallbacks[nextDMAIndex] = callback
 
@@ -120,7 +120,7 @@ func NewDMA(callback func(DMA)) *DMA {
 	sam.DMAC.CTRL.SetBits(sam.DMAC_CTRL_DMAENABLE)
 
 	nextDMAIndex++
-	return &dma
+	return dma
 }
 
 // SetTrigger sets trigger source of Channel Control A register
@@ -176,19 +176,19 @@ func (dma *DMA) Start() {
 	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.SetBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE)
 }
 
-func (dma DMA) Trigger() {
+func (dma *DMA) Trigger() {
 	sam.DMAC.SWTRIGCTRL.SetBits(1 << dma.Channel)
 }
 
-func (dma DMA) SetAction() {
+func (dma *DMA) SetAction() {
 	// block beat transaction ...
 }
 
-func (dma DMA) SetDescriptor(desc DMADescriptor) {
+func (dma *DMA) SetDescriptor(desc DMADescriptor) {
 	DmaDescriptorSection[dma.Channel] = desc
 }
 
-func (dma DMA) Wait() {
+func (dma *DMA) Wait() {
 	//for !sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL) {
 	//}
 	//sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.SetBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL)
@@ -229,7 +229,7 @@ func GetDMADescriptorHelper() *DMADescriptorHelper {
 	return ret
 }
 
-func (dma DMA) AddDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize uint8, srcInc, dstInc bool, stepSize uint8, stepSrc bool, size uint16) {
+func (dma *DMA) AddDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize uint8, srcInc, dstInc bool, stepSize uint8, stepSrc bool, size uint16) {
 	si := uint16(0)
 	if srcInc {
 		si = 1
@@ -314,7 +314,7 @@ func (dma DMA) AddDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize ui
 	}
 }
 
-func (dma DMA) NewDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize uint8, srcInc, dstInc bool, stepSize uint8, stepSrc bool, size uint16) *DMADescriptor {
+func (dma *DMA) NewDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize uint8, srcInc, dstInc bool, stepSize uint8, stepSrc bool, size uint16) *DMADescriptor {
 	si := uint16(0)
 	if srcInc {
 		si = 1
