@@ -19,7 +19,7 @@ type DescriptorConfig struct {
 	DST      unsafe.Pointer
 }
 
-func NewDescriptorWithConfig(cfg DescriptorConfig) *DMADescriptor {
+func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
 
 	si := uint16(0)
 	if cfg.SRCINC {

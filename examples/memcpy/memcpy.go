@@ -47,7 +47,7 @@ func main() {
 	d.SetTrigger(dma.DMAC_CHANNEL_CHCTRLA_TRIGSRC_DISABLE) // Only software/event triggers
 	d.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_TRANSACTION)
 
-	d1 := dma.NewDescriptorWithConfig(dma.DescriptorConfig{
+	d1 := dma.NewDescriptor(dma.DescriptorConfig{
 		SRC:    unsafe.Pointer(&source[0]),
 		DST:    unsafe.Pointer(&destination[0]),
 		SRCINC: true,
@@ -55,7 +55,7 @@ func main() {
 		SIZE:   3,
 	})
 
-	d2 := dma.NewDescriptorWithConfig(dma.DescriptorConfig{
+	d2 := dma.NewDescriptor(dma.DescriptorConfig{
 		SRC:    unsafe.Pointer(&source[0]),
 		DST:    unsafe.Pointer(&destination[8]),
 		SRCINC: true,
