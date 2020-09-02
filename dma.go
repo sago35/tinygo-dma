@@ -140,10 +140,9 @@ func (dma *DMA) SetTrigger(triggerSource uint8) error {
 //   sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_TRANSACTION
 //     0x3 : TRANSACTION : One trigger required for each transaction
 func (dma *DMA) SetTriggerAction(triggerAction uint8) error {
-	if 0x03 <= triggerAction {
+	if 0x03 < triggerAction {
 		return fmt.Errorf("trigger action must be smaller than 4")
 	}
-	//
 	dma.triggerAction = triggerAction
 	return nil
 }
@@ -184,8 +183,12 @@ func (dma *DMA) SetAction() {
 	// block beat transaction ...
 }
 
-func (dma *DMA) SetDescriptor(desc DMADescriptor) {
-	DmaDescriptorSection[dma.Channel] = desc
+func (dma *DMA) SetDescriptor(desc *DMADescriptor) {
+	DmaDescriptorSection[dma.Channel].btctrl = desc.btctrl
+	DmaDescriptorSection[dma.Channel].btcnt = desc.btcnt
+	DmaDescriptorSection[dma.Channel].srcaddr = desc.srcaddr
+	DmaDescriptorSection[dma.Channel].dstaddr = desc.dstaddr
+	DmaDescriptorSection[dma.Channel].Descaddr = desc.Descaddr
 }
 
 func (dma *DMA) Wait() {
@@ -193,203 +196,4 @@ func (dma *DMA) Wait() {
 	//}
 	//sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.SetBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL)
 	<-DMAChannels[dma.Channel].wait
-}
-
-type DMADescriptorHelper struct {
-	StepSize uint8          // Address Increment Step Size : 1, 2, 4, 8, 16, 32, 64, 128
-	StepSel  uint8          // Step Selection : 0=DST, 1=SRC
-	DstInc   bool           // Destination Address Increment Enable
-	SrcInc   bool           // Source Address Increment Enable
-	BeatSize uint8          // Beat Size : 1=BYTE, 2:HWORD, 4:WORD
-	BlockAct uint8          // Block Action : 0=NOACT, 1=INT, 2=SUSPEND, 3=BOTH
-	EvoSel   uint8          // Event Output Selection : 0=DISABLE, 1=BLOCK, 3:BEAT
-	Valid    bool           // Descriptor Valid
-	Length   uint32         // Length is `BTCNT * BeatSize` or `BTCNT * BeatSize * StepSize`
-	SrcAddr  unsafe.Pointer // Block Transfer Source Address
-	DstAddr  unsafe.Pointer // Block Transfer Destination Address
-	DescAddr unsafe.Pointer // Next Descriptor Address (must be 128-bit aligned)
-}
-
-func GetDMADescriptorHelper() *DMADescriptorHelper {
-	ret := &DMADescriptorHelper{
-		StepSize: 1,
-		StepSel:  0,
-		DstInc:   false,
-		SrcInc:   false,
-		BeatSize: 1,
-		BlockAct: 0,
-		EvoSel:   0,
-		Valid:    true,
-		Length:   0,
-		SrcAddr:  unsafe.Pointer(nil),
-		DstAddr:  unsafe.Pointer(nil),
-		DescAddr: unsafe.Pointer(nil),
-	}
-
-	return ret
-}
-
-func (dma *DMA) AddDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize uint8, srcInc, dstInc bool, stepSize uint8, stepSrc bool, size uint16) {
-	si := uint16(0)
-	if srcInc {
-		si = 1
-	}
-
-	di := uint16(0)
-	if dstInc {
-		di = 1
-	}
-
-	ssel := uint16(0)
-	if stepSrc {
-		ssel = 1
-	}
-
-	ss := uint16(0)
-	switch stepSize {
-	case 1:
-		ss = 0
-	case 2:
-		ss = 1
-	case 4:
-		ss = 2
-	case 8:
-		ss = 3
-	case 16:
-		ss = 4
-	case 32:
-		ss = 5
-	case 64:
-		ss = 6
-	case 128:
-		ss = 7
-	default:
-		// TODO: error
-		ss = 0
-	}
-
-	bs := uint16(0)
-	switch beatSize {
-	case 1:
-		bs = 0
-	case 2:
-		bs = 1
-	case 4:
-		bs = 2
-	default:
-		// TODO: error
-		bs = 0
-	}
-
-	// 1
-	DmaDescriptorSection[dma.Channel] = DMADescriptor{
-		btctrl: (1 << 0) | // VALID: Descriptor Valid
-			(0 << 1) | // EVOSEL=DISABLE: Event Output Selection
-			(1 << 3) | // BLOCKACT=NOACT: Block Action
-			(bs << 8) | // BEATSIZE: Beat Size
-			(si << 10) | // SRCINC: Source Address Increment Enable
-			(di << 11) | // DSTINC: Destination Address Increment Enable
-			(ssel << 12) | // STEPSEL: Step Selection
-			(ss << 13), // STEPSIZE: Address Increment Step Size
-		btcnt:    size >> bs,
-		Descaddr: 0,
-	}
-
-	if stepSrc {
-		// STEPSEL == SRC
-		DmaDescriptorSection[dma.Channel].srcaddr = uint32(uintptr(src) + uintptr((size)<<ss))
-		if dstInc {
-			DmaDescriptorSection[dma.Channel].dstaddr = uint32(uintptr(dst) + uintptr(size))
-		} else {
-			DmaDescriptorSection[dma.Channel].dstaddr = uint32(uintptr(dst))
-		}
-	} else {
-		// STEPSEL == DST
-		if srcInc {
-			DmaDescriptorSection[dma.Channel].srcaddr = uint32(uintptr(src) + uintptr(size))
-		} else {
-			DmaDescriptorSection[dma.Channel].srcaddr = uint32(uintptr(src))
-		}
-		DmaDescriptorSection[dma.Channel].dstaddr = uint32(uintptr(dst) + uintptr((size)<<ss))
-	}
-}
-
-func (dma *DMA) NewDescriptor(src unsafe.Pointer, dst unsafe.Pointer, beatSize uint8, srcInc, dstInc bool, stepSize uint8, stepSrc bool, size uint16) *DMADescriptor {
-	si := uint16(0)
-	if srcInc {
-		si = 1
-	}
-
-	di := uint16(0)
-	if dstInc {
-		di = 1
-	}
-
-	ssel := uint16(0)
-	if stepSrc {
-		ssel = 1
-	}
-
-	ss := uint16(0)
-	switch stepSize {
-	case 1:
-		ss = 0
-	case 2:
-		ss = 1
-	case 4:
-		ss = 2
-	case 8:
-		ss = 3
-	case 16:
-		ss = 4
-	case 32:
-		ss = 5
-	case 64:
-		ss = 6
-	case 128:
-		ss = 7
-	default:
-		// TODO: error
-		ss = 0
-	}
-
-	bs := uint16(0)
-	switch beatSize {
-	case 1:
-		bs = 0
-	case 2:
-		bs = 1
-	case 4:
-		bs = 2
-	default:
-		// TODO: error
-		bs = 0
-	}
-
-	// 2
-	//go:align 16
-	DmaDescriptorSection[1] = DMADescriptor{
-		btctrl: (1 << 0) | // VALID: Descriptor Valid
-			(0 << 1) | // EVOSEL=DISABLE: Event Output Selection
-			(0 << 3) | // BLOCKACT=NOACT: Block Action
-			(bs << 8) | // BEATSIZE: Beat Size
-			(si << 10) | // SRCINC: Source Address Increment Enable
-			(di << 11) | // DSTINC: Destination Address Increment Enable
-			(ssel << 12) | // STEPSEL: Step Selection
-			(ss << 13), // STEPSIZE: Address Increment Step Size
-		btcnt:    size >> bs,
-		Descaddr: 0,
-	}
-
-	if stepSrc {
-		// STEPSEL == SRC
-		DmaDescriptorSection[1].srcaddr = uint32(uintptr(src) + uintptr((size)<<ss))
-		DmaDescriptorSection[1].dstaddr = uint32(uintptr(dst) + uintptr(size))
-	} else {
-		// STEPSEL == DST
-		DmaDescriptorSection[1].srcaddr = uint32(uintptr(src) + uintptr(size))
-		DmaDescriptorSection[1].dstaddr = uint32(uintptr(dst) + uintptr((size)<<ss))
-	}
-
-	return &DmaDescriptorSection[1]
 }
