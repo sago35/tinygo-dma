@@ -21,7 +21,7 @@ var (
 
 var (
 	dbg5 = machine.D5
-	dbg6 = machine.D4
+	dbg6 = machine.D6
 )
 
 func initDbg() {
@@ -41,54 +41,35 @@ func main() {
 	fmt.Printf("- %b\r\n", sam.DMAC.CHANNEL[0].CHSTATUS.Get())
 	d := dma.NewDMA(func(d *dma.DMA) {
 		dbg6.Toggle()
-		d.Trigger()
+		//d.Trigger()
 		return
 	})
-	d.SetTrigger(0) // Only software/event triggers
+	d.SetTrigger(dma.DMAC_CHANNEL_CHCTRLA_TRIGSRC_DISABLE) // Only software/event triggers
 	d.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_TRANSACTION)
 
-	// Only software/event triggers
-	//d.SetTrigger(0)
+	d1 := dma.NewDescriptorWithConfig(dma.DescriptorConfig{
+		SRC:    unsafe.Pointer(&source[0]),
+		DST:    unsafe.Pointer(&destination[0]),
+		SRCINC: true,
+		DSTINC: true,
+		SIZE:   3,
+	})
 
-	// やっぱりいらないものが多いので、 DMAConfig{} を作って処理するようにしたい
-	// func (c *DMAConfig) Add(a DMAConfig) も出来るようにしたい
-	// 最終的に d.AddDescriptor(c) して link も出来るようにする
-	// といいつつ、 chan 毎の最初の 1 個目の descriptor はアドレスがある程度固定なので
-	//   c := DMADescriptor{}
-	//   c.Add(DMADescriptor{})
-	//   d.SetDescriptor(c)
-	// みたいなのが良いかも
-	// 最終、決められたアドレスの場所の descriptor に書く必要があるのでコピーしつつ
-	// channel 毎に enable にしていく必要がありそう
-	// なんでも設定できる I/F を定義するのはかなり難しい感じなので、
-	// 用途を絞って SPI tx に対してはこれ、みたいなのを定義するのが楽そう
-	d.AddDescriptor(unsafe.Pointer(&source[0]), unsafe.Pointer(&destination[0]),
-		1,       // Beat Size
-		true,    // Source Address Increment
-		true,    // Destination Address Increment
-		1,       // Step Size
-		false,   // Step Selection (true: source, false: destination)
-		bufSize, // Total size of DMA transfer
-	)
+	d2 := dma.NewDescriptorWithConfig(dma.DescriptorConfig{
+		SRC:    unsafe.Pointer(&source[0]),
+		DST:    unsafe.Pointer(&destination[8]),
+		SRCINC: true,
+		DSTINC: true,
+		SIZE:   bufSize - 8,
+	})
 
-	desc2 := d.NewDescriptor(unsafe.Pointer(&source[0]), unsafe.Pointer(&destination[9]),
-		1,         // Beat Size
-		true,      // Source Address Increment
-		true,      // Destination Address Increment
-		1,         // Step Size
-		false,     // Step Selection (true: source, false: destination)
-		bufSize-9, // Total size of DMA transfer
-	)
+	d1.AddDescriptor(d2)
+	d.SetDescriptor(d1)
+	fmt.Printf("d1: %p %#v\r\n", d1, d1)
+	fmt.Printf("d2: %p %#v\r\n", d2, d2)
 
 	for i := range source {
 		source[i] = 0xFF - byte(i)
-	}
-
-	if true {
-		fmt.Printf("new %08X\r\n", unsafe.Pointer(&desc2))
-		dma.DmaDescriptorSection[d.Channel].Descaddr = uint32(uintptr(unsafe.Pointer(desc2)))
-		fmt.Printf("%#v\r\n", dma.DmaDescriptorSection[0])
-		fmt.Printf("%#v\r\n", dma.DmaDescriptorSection[1])
 	}
 
 	fmt.Printf("%b\r\n", sam.DMAC.CHANNEL[0].CHSTATUS.Get())
