@@ -68,4 +68,6 @@ const (
 	DMAC_CHANNEL_CHCTRLA_TRIGSRC_AES_RD      = 0x52        // DMA DATA Read trigger
 	DMAC_CHANNEL_CHCTRLA_TRIGSRC_QSPI_RX     = 0x53        // Indexes of QSPI RX trigger
 	DMAC_CHANNEL_CHCTRLA_TRIGSRC_QSPI_TX     = 0x54        // Indexes of QSPI TX trigger
+
+	DMAC_CHANNEL_CHCTRLA_TRIGSRC_Max = 0x54
 )

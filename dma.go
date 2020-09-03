@@ -125,8 +125,8 @@ func NewDMA(callback func(*DMA)) *DMA {
 
 // SetTrigger sets trigger source of Channel Control A register
 func (dma *DMA) SetTrigger(triggerSource uint8) error {
-	if maxDMATriggerSources <= triggerSource {
-		return fmt.Errorf("trigger source must be smaller than 32")
+	if DMAC_CHANNEL_CHCTRLA_TRIGSRC_Max < triggerSource {
+		return fmt.Errorf("trigger source must be smaller than %d", DMAC_CHANNEL_CHCTRLA_TRIGSRC_Max)
 	}
 	dma.triggerSource = triggerSource
 	return nil
