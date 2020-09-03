@@ -48,7 +48,7 @@ func main() {
 	dmatx.SetTrigger(dma.DMAC_CHANNEL_CHCTRLA_TRIGSRC_SERCOM1_TX)
 	dmatx.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BURST)
 
-	desc := dma.NewDescriptor(dma.DescriptorConfig{
+	dmatx.GetDescriptor().UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&from[0]),
 		DST:      unsafe.Pointer(&spi0.Bus.DATA.Reg),
 		SRCINC:   true,
@@ -56,7 +56,6 @@ func main() {
 		SIZE:     uint32(len(from)), // Total size of DMA transfer
 		BLOCKACT: 1,
 	})
-	dmatx.SetDescriptor(desc)
 
 	dmarx := dma.NewDMA(func(d *dma.DMA) {
 		dbg6.Toggle()
@@ -65,7 +64,7 @@ func main() {
 	dmarx.SetTrigger(dma.DMAC_CHANNEL_CHCTRLA_TRIGSRC_SERCOM1_RX)
 	dmarx.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BURST)
 
-	desc2 := dma.NewDescriptor(dma.DescriptorConfig{
+	dmarx.GetDescriptor().UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&spi0.Bus.DATA.Reg),
 		DST:      unsafe.Pointer(&to[0]),
 		SRCINC:   false,
@@ -73,7 +72,6 @@ func main() {
 		SIZE:     uint32(len(to)), // Total size of DMA transfer
 		BLOCKACT: 1,
 	})
-	dmarx.SetDescriptor(desc2)
 
 	for {
 		dbg5.Toggle()

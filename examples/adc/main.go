@@ -27,7 +27,8 @@ func main() {
 
 	to := uint16(0)
 
-	desc := dma.NewDescriptor(dma.DescriptorConfig{
+	desc := dmaadc.GetDescriptor()
+	desc.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&sam.ADC0.RESULT.Reg),
 		DST:      unsafe.Pointer(&to),
 		SRCINC:   false,
@@ -37,7 +38,6 @@ func main() {
 		BEATSIZE: 2,
 	})
 	desc.AddDescriptor(desc)
-	dmaadc.SetDescriptor(desc)
 
 	sensor := machine.ADC{Pin: machine.A0}
 	sensor.Configure()

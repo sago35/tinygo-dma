@@ -136,7 +136,8 @@ func main() {
 	dmadac.SetTrigger(dma.DMAC_CHANNEL_CHCTRLA_TRIGSRC_TC0_OVF)
 	dmadac.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BURST)
 
-	desc := dma.NewDescriptor(dma.DescriptorConfig{
+	desc := dmadac.GetDescriptor()
+	desc.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&from[0]),
 		DST:      unsafe.Pointer(&sam.DAC.DATA[0].Reg),
 		SRCINC:   true,
@@ -145,8 +146,7 @@ func main() {
 		BEATSIZE: 2,
 		SIZE:     uint32(len(from)) * 2,
 	})
-	desc.AddDescriptor(&dma.DmaDescriptorSection[0])
-	dmadac.SetDescriptor(desc)
+	desc.AddDescriptor(desc)
 
 	a0 := machine.A0
 	a0.Configure(machine.PinConfig{Mode: machine.PinOutput})

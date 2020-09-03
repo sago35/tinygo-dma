@@ -47,7 +47,8 @@ func main() {
 	dmatx.SetTrigger(dma.DMAC_CHANNEL_CHCTRLA_TRIGSRC_SERCOM1_TX)
 	dmatx.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BURST)
 
-	desc := dma.NewDescriptor(dma.DescriptorConfig{
+	desc := dmatx.GetDescriptor()
+	desc.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&from[0]),
 		DST:      unsafe.Pointer(&spi0.Bus.DATA.Reg),
 		SRCINC:   true,
@@ -55,7 +56,6 @@ func main() {
 		SIZE:     uint32(len(from)), // Total size of DMA transfer
 		BLOCKACT: 1,
 	})
-	dmatx.SetDescriptor(desc)
 
 	for {
 		dbg5.Toggle()
