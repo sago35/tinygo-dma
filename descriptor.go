@@ -6,6 +6,14 @@ import (
 	"unsafe"
 )
 
+type DMADescriptor struct {
+	btctrl   uint16
+	btcnt    uint16
+	srcaddr  uint32 //unsafe.Pointer
+	dstaddr  uint32 //unsafe.Pointer
+	Descaddr uint32 //unsafe.Pointer
+}
+
 type DescriptorConfig struct {
 	EVOSEL   byte // DISABLE, BLOCK, BEAT
 	BLOCKACT byte // 0:NOACT, 1:INT, 2:SUSPEND, 3:BOTH

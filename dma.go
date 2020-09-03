@@ -17,18 +17,9 @@ type DMA struct {
 	wait          chan bool
 }
 
-type DMADescriptor struct {
-	btctrl   uint16
-	btcnt    uint16
-	srcaddr  uint32 //unsafe.Pointer
-	dstaddr  uint32 //unsafe.Pointer
-	Descaddr uint32 //unsafe.Pointer
-}
-
 const (
-	dmaDescriptors       = 32
-	maxDMAchannels       = 32
-	maxDMATriggerSources = 32
+	dmaDescriptors = 32
+	maxDMAchannels = 32
 )
 
 //go:align 16
