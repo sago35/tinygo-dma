@@ -46,11 +46,6 @@ func init() {
 }
 
 func handleDMACInterrupt(intr interrupt.Interrupt) {
-	//fmt.Printf("interrupt %#v %04X\r\n", intr, sam.DMAC.INTPEND.Get())
-	//susp := sam.DMAC.INTPEND.HasBits(sam.DMAC_INTPEND_SUSP_Pos)
-	//tcmpl := sam.DMAC.INTPEND.HasBits(sam.DMAC_INTPEND_TCMPL_Pos)
-	//terr := sam.DMAC.INTPEND.HasBits(sam.DMAC_INTPEND_TERR_Pos)
-	//channel := (sam.DMAC.INTPEND.Get() >> sam.DMAC_INTPEND_ID_Pos) & sam.DMAC_INTPEND_ID_Msk
 	channel := (sam.DMAC.INTPEND.Get() >> sam.DMAC_INTPEND_ID_Pos) & sam.DMAC_INTPEND_ID_Msk
 
 	select {
@@ -90,8 +85,6 @@ func NewDMA(callback func(*DMA)) *DMA {
 
 		sam.DMAC.BASEADDR.Set(uint32(uintptr(unsafe.Pointer(&DmaDescriptorSection))))
 		sam.DMAC.WRBADDR.Set(uint32(uintptr(unsafe.Pointer(&dmaDescriptorWritebackSection))))
-		//fmt.Printf("BASE %08X\r\n", uint32(uintptr(unsafe.Pointer(&DmaDescriptorSection))))
-		//fmt.Printf("WRBA %08X\r\n", uint32(uintptr(unsafe.Pointer(&dmaDescriptorWritebackSection))))
 
 		sam.DMAC.CTRL.SetBits(sam.DMAC_CTRL_LVLEN0 | sam.DMAC_CTRL_LVLEN1 | sam.DMAC_CTRL_LVLEN2 | sam.DMAC_CTRL_LVLEN3)
 
@@ -131,13 +124,14 @@ func (dma *DMA) SetTrigger(triggerSource uint8) error {
 //   sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_TRANSACTION
 //     0x3 : TRANSACTION : One trigger required for each transaction
 func (dma *DMA) SetTriggerAction(triggerAction uint8) error {
-	if 0x03 < triggerAction {
+	if sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_TRANSACTION < triggerAction {
 		return fmt.Errorf("trigger action must be smaller than 4")
 	}
 	dma.triggerAction = triggerAction
 	return nil
 }
 
+// Start starts DMA transfer.
 func (dma *DMA) Start() {
 	// Reset channel.
 	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.ClearBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE)
@@ -150,7 +144,6 @@ func (dma *DMA) Start() {
 
 	// Configure channel.
 	sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_SUSP | sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
-	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
 
 	sam.DMAC.CHANNEL[dma.Channel].CHPRILVL.Set(0)
 
@@ -158,14 +151,10 @@ func (dma *DMA) Start() {
 		(uint32(dma.triggerAction) << sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_Pos) |
 		(sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_SINGLE << sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_Pos))
 
-	//sam.DMAC.CHANNEL[dma.Channel].CHCTRLB.Set(sam.DMAC_CHANNEL_CHCTRLB_CMD_RESUME << sam.DMAC_CHANNEL_CHCTRLB_CMD_Pos)
-
-	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_SUSP | sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
-	//sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_TCMPL)
-
 	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.SetBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE)
 }
 
+// Trigger generates a DMA software trigger on correspond channel
 func (dma *DMA) Trigger() {
 	sam.DMAC.SWTRIGCTRL.SetBits(1 << dma.Channel)
 }
