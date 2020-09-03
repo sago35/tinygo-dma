@@ -183,12 +183,8 @@ func (dma *DMA) SetAction() {
 	// block beat transaction ...
 }
 
-func (dma *DMA) SetDescriptor(desc *DMADescriptor) {
-	DmaDescriptorSection[dma.Channel].btctrl = desc.btctrl
-	DmaDescriptorSection[dma.Channel].btcnt = desc.btcnt
-	DmaDescriptorSection[dma.Channel].srcaddr = desc.srcaddr
-	DmaDescriptorSection[dma.Channel].dstaddr = desc.dstaddr
-	DmaDescriptorSection[dma.Channel].Descaddr = desc.Descaddr
+func (dma *DMA) GetDescriptor() *DMADescriptor {
+	return &DmaDescriptorSection[dma.Channel]
 }
 
 func (dma *DMA) Wait() {

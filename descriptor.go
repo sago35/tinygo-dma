@@ -20,7 +20,13 @@ type DescriptorConfig struct {
 }
 
 func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
+	//go:align 16
+	var ret DMADescriptor
+	ret.UpdateDescriptor(cfg)
+	return &ret
+}
 
+func (d *DMADescriptor) UpdateDescriptor(cfg DescriptorConfig) {
 	si := uint16(0)
 	if cfg.SRCINC {
 		si = 1
@@ -72,10 +78,7 @@ func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
 		bs = 0
 	}
 
-	//go:align 16
-	var ret DMADescriptor
-
-	ret.btctrl = (1 << 0) | // VALID: Descriptor Valid
+	d.btctrl = (1 << 0) | // VALID: Descriptor Valid
 		(uint16(cfg.EVOSEL) << 1) | // EVOSEL=DISABLE: Event Output Selection
 		(uint16(cfg.BLOCKACT) << 3) | // BLOCKACT=NOACT: Block Action
 		(bs << 8) | // BEATSIZE: Beat Size
@@ -83,36 +86,34 @@ func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
 		(di << 11) | // DSTINC: Destination Address Increment Enable
 		(ssel << 12) | // STEPSEL: Step Selection
 		(ss << 13) // STEPSIZE: Address Increment Step Size
-	ret.btcnt = uint16(cfg.SIZE >> bs)
-	ret.Descaddr = 0
+	d.btcnt = uint16(cfg.SIZE >> bs)
+	d.Descaddr = 0
 
 	if cfg.STEPSEL {
 		// STEPSEL == SRC
 		if cfg.SRCINC {
-			ret.srcaddr = uint32(uintptr(cfg.SRC) + uintptr((cfg.SIZE)<<ss))
+			d.srcaddr = uint32(uintptr(cfg.SRC) + uintptr((cfg.SIZE)<<ss))
 		} else {
-			ret.srcaddr = uint32(uintptr(cfg.SRC))
+			d.srcaddr = uint32(uintptr(cfg.SRC))
 		}
 		if cfg.DSTINC {
-			ret.dstaddr = uint32(uintptr(cfg.DST) + uintptr(cfg.SIZE))
+			d.dstaddr = uint32(uintptr(cfg.DST) + uintptr(cfg.SIZE))
 		} else {
-			ret.dstaddr = uint32(uintptr(cfg.DST))
+			d.dstaddr = uint32(uintptr(cfg.DST))
 		}
 	} else {
 		// STEPSEL == DST
 		if cfg.SRCINC {
-			ret.srcaddr = uint32(uintptr(cfg.SRC) + uintptr(cfg.SIZE))
+			d.srcaddr = uint32(uintptr(cfg.SRC) + uintptr(cfg.SIZE))
 		} else {
-			ret.srcaddr = uint32(uintptr(cfg.SRC))
+			d.srcaddr = uint32(uintptr(cfg.SRC))
 		}
 		if cfg.DSTINC {
-			ret.dstaddr = uint32(uintptr(cfg.DST) + uintptr((cfg.SIZE)<<ss))
+			d.dstaddr = uint32(uintptr(cfg.DST) + uintptr((cfg.SIZE)<<ss))
 		} else {
-			ret.dstaddr = uint32(uintptr(cfg.DST))
+			d.dstaddr = uint32(uintptr(cfg.DST))
 		}
 	}
-
-	return &ret
 }
 
 func (d *DMADescriptor) AddDescriptor(next *DMADescriptor) {
