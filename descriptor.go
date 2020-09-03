@@ -88,12 +88,28 @@ func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
 
 	if cfg.STEPSEL {
 		// STEPSEL == SRC
-		ret.srcaddr = uint32(uintptr(cfg.SRC) + uintptr((cfg.SIZE)<<ss))
-		ret.dstaddr = uint32(uintptr(cfg.DST) + uintptr(cfg.SIZE))
+		if cfg.SRCINC {
+			ret.srcaddr = uint32(uintptr(cfg.SRC) + uintptr((cfg.SIZE)<<ss))
+		} else {
+			ret.srcaddr = uint32(uintptr(cfg.SRC))
+		}
+		if cfg.DSTINC {
+			ret.dstaddr = uint32(uintptr(cfg.DST) + uintptr(cfg.SIZE))
+		} else {
+			ret.dstaddr = uint32(uintptr(cfg.DST))
+		}
 	} else {
 		// STEPSEL == DST
-		ret.srcaddr = uint32(uintptr(cfg.SRC) + uintptr(cfg.SIZE))
-		ret.dstaddr = uint32(uintptr(cfg.DST) + uintptr((cfg.SIZE)<<ss))
+		if cfg.SRCINC {
+			ret.srcaddr = uint32(uintptr(cfg.SRC) + uintptr(cfg.SIZE))
+		} else {
+			ret.srcaddr = uint32(uintptr(cfg.SRC))
+		}
+		if cfg.DSTINC {
+			ret.dstaddr = uint32(uintptr(cfg.DST) + uintptr((cfg.SIZE)<<ss))
+		} else {
+			ret.dstaddr = uint32(uintptr(cfg.DST))
+		}
 	}
 
 	return &ret
