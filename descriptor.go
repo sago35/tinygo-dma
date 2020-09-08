@@ -36,13 +36,13 @@ func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
 
 func (d *DMADescriptor) UpdateDescriptor(cfg DescriptorConfig) {
 	d.btctrl = (1 << 0) | // VALID: Descriptor Valid
-		uint16(cfg.EVOSEL) | // EVOSEL=DISABLE: Event Output Selection
-		uint16(cfg.BLOCKACT) | // BLOCKACT=NOACT: Block Action
-		uint16(cfg.BEATSIZE) | // BEATSIZE: Beat Size
-		uint16(cfg.SRCINC) | // SRCINC: Source Address Increment Enable
-		uint16(cfg.DSTINC) | // DSTINC: Destination Address Increment Enable
-		uint16(cfg.STEPSEL) | // STEPSEL: Step Selection
-		uint16(cfg.STEPSIZE) // STEPSIZE: Address Increment Step Size
+		cfg.EVOSEL | // EVOSEL=DISABLE: Event Output Selection
+		cfg.BLOCKACT | // BLOCKACT=NOACT: Block Action
+		cfg.BEATSIZE | // BEATSIZE: Beat Size
+		cfg.SRCINC | // SRCINC: Source Address Increment Enable
+		cfg.DSTINC | // DSTINC: Destination Address Increment Enable
+		cfg.STEPSEL | // STEPSEL: Step Selection
+		cfg.STEPSIZE // STEPSIZE: Address Increment Step Size
 	d.btcnt = uint16(cfg.SIZE >> (uint16(cfg.BEATSIZE) >> DMAC_SRAM_BTCTRL_BEATSIZE_Pos))
 	d.Descaddr = 0
 
