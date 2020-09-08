@@ -15,13 +15,13 @@ type DMADescriptor struct {
 }
 
 type DescriptorConfig struct {
-	EVOSEL   byte // DISABLE, BLOCK, BEAT
-	BLOCKACT byte // 0:NOACT, 1:INT, 2:SUSPEND, 3:BOTH
-	BEATSIZE byte // 1, 2, 4
-	SRCINC   bool
-	DSTINC   bool
-	STEPSEL  bool // false: DST, true: SRC
-	STEPSIZE byte // 1, 2, 4, 8, 16, 32, 64, 128
+	EVOSEL   uint16 // DISABLE, BLOCK, BEAT
+	BLOCKACT uint16 // 0:NOACT, 1:INT, 2:SUSPEND, 3:BOTH
+	BEATSIZE uint16 // 1, 2, 4
+	SRCINC   uint16
+	DSTINC   uint16
+	STEPSEL  uint16 // false: DST, true: SRC
+	STEPSIZE uint16 // 1, 2, 4, 8, 16, 32, 64, 128
 	SIZE     uint32
 	SRC      unsafe.Pointer
 	DST      unsafe.Pointer
@@ -35,89 +35,38 @@ func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
 }
 
 func (d *DMADescriptor) UpdateDescriptor(cfg DescriptorConfig) {
-	si := uint16(0)
-	if cfg.SRCINC {
-		si = 1
-	}
-
-	di := uint16(0)
-	if cfg.DSTINC {
-		di = 1
-	}
-
-	ssel := uint16(0)
-	if cfg.STEPSEL {
-		ssel = 1
-	}
-
-	ss := uint16(0)
-	switch cfg.STEPSIZE {
-	case 0, 1:
-		ss = 0
-	case 2:
-		ss = 1
-	case 4:
-		ss = 2
-	case 8:
-		ss = 3
-	case 16:
-		ss = 4
-	case 32:
-		ss = 5
-	case 64:
-		ss = 6
-	case 128:
-		ss = 7
-	default:
-		// TODO: error
-		ss = 0
-	}
-
-	bs := uint16(0)
-	switch cfg.BEATSIZE {
-	case 0, 1:
-		bs = 0
-	case 2:
-		bs = 1
-	case 4:
-		bs = 2
-	default:
-		// TODO: error
-		bs = 0
-	}
-
 	d.btctrl = (1 << 0) | // VALID: Descriptor Valid
-		(uint16(cfg.EVOSEL) << 1) | // EVOSEL=DISABLE: Event Output Selection
-		(uint16(cfg.BLOCKACT) << 3) | // BLOCKACT=NOACT: Block Action
-		(bs << 8) | // BEATSIZE: Beat Size
-		(si << 10) | // SRCINC: Source Address Increment Enable
-		(di << 11) | // DSTINC: Destination Address Increment Enable
-		(ssel << 12) | // STEPSEL: Step Selection
-		(ss << 13) // STEPSIZE: Address Increment Step Size
-	d.btcnt = uint16(cfg.SIZE >> bs)
+		uint16(cfg.EVOSEL) | // EVOSEL=DISABLE: Event Output Selection
+		uint16(cfg.BLOCKACT) | // BLOCKACT=NOACT: Block Action
+		uint16(cfg.BEATSIZE) | // BEATSIZE: Beat Size
+		uint16(cfg.SRCINC) | // SRCINC: Source Address Increment Enable
+		uint16(cfg.DSTINC) | // DSTINC: Destination Address Increment Enable
+		uint16(cfg.STEPSEL) | // STEPSEL: Step Selection
+		uint16(cfg.STEPSIZE) // STEPSIZE: Address Increment Step Size
+	d.btcnt = uint16(cfg.SIZE >> (uint16(cfg.BEATSIZE) >> DMAC_SRAM_BTCTRL_BEATSIZE_Pos))
 	d.Descaddr = 0
 
-	if cfg.STEPSEL {
+	if cfg.STEPSEL == (DMAC_SRAM_BTCTRL_STEPSEL_SRC >> DMAC_SRAM_BTCTRL_STEPSEL_Pos) {
 		// STEPSEL == SRC
-		if cfg.SRCINC {
-			d.srcaddr = uint32(uintptr(cfg.SRC) + uintptr((cfg.SIZE)<<ss))
+		if cfg.SRCINC == DMAC_SRAM_BTCTRL_SRCINC_ENABLE {
+			d.srcaddr = uint32(uintptr(cfg.SRC) + uintptr((cfg.SIZE)<<(uint32(cfg.STEPSIZE)>>DMAC_SRAM_BTCTRL_STEPSIZE_Pos)))
 		} else {
 			d.srcaddr = uint32(uintptr(cfg.SRC))
 		}
-		if cfg.DSTINC {
+		if cfg.DSTINC == DMAC_SRAM_BTCTRL_DSTINC_ENABLE {
 			d.dstaddr = uint32(uintptr(cfg.DST) + uintptr(cfg.SIZE))
 		} else {
 			d.dstaddr = uint32(uintptr(cfg.DST))
 		}
 	} else {
 		// STEPSEL == DST
-		if cfg.SRCINC {
+		if cfg.SRCINC == DMAC_SRAM_BTCTRL_SRCINC_ENABLE {
 			d.srcaddr = uint32(uintptr(cfg.SRC) + uintptr(cfg.SIZE))
 		} else {
 			d.srcaddr = uint32(uintptr(cfg.SRC))
 		}
-		if cfg.DSTINC {
-			d.dstaddr = uint32(uintptr(cfg.DST) + uintptr((cfg.SIZE)<<ss))
+		if cfg.DSTINC == DMAC_SRAM_BTCTRL_DSTINC_ENABLE {
+			d.dstaddr = uint32(uintptr(cfg.DST) + uintptr((cfg.SIZE)<<(uint32(cfg.STEPSIZE)>>DMAC_SRAM_BTCTRL_STEPSIZE_Pos)))
 		} else {
 			d.dstaddr = uint32(uintptr(cfg.DST))
 		}
