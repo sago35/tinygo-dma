@@ -140,10 +140,10 @@ func main() {
 	desc.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&from[0]),
 		DST:      unsafe.Pointer(&sam.DAC.DATA[0].Reg),
-		SRCINC:   true,
-		DSTINC:   false,
-		STEPSEL:  true,
-		BEATSIZE: 2,
+		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		STEPSEL:  dma.DMAC_SRAM_BTCTRL_STEPSEL_SRC,
+		BEATSIZE: dma.DMAC_SRAM_BTCTRL_BEATSIZE_HWORD,
 		SIZE:     uint32(len(from)) * 2,
 	})
 	desc.AddDescriptor(desc)

@@ -31,11 +31,11 @@ func main() {
 	desc.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&sam.ADC0.RESULT.Reg),
 		DST:      unsafe.Pointer(&to),
-		SRCINC:   false,
-		DSTINC:   true,
+		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_DISABLE,
+		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_ENABLE,
+		STEPSEL:  dma.DMAC_SRAM_BTCTRL_STEPSEL_SRC,
+		BEATSIZE: dma.DMAC_SRAM_BTCTRL_BEATSIZE_HWORD,
 		SIZE:     2,
-		STEPSEL:  false,
-		BEATSIZE: 2,
 	})
 	desc.AddDescriptor(desc)
 

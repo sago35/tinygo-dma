@@ -51,16 +51,16 @@ func main() {
 	d1.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:    unsafe.Pointer(&source[0]),
 		DST:    unsafe.Pointer(&destination[0]),
-		SRCINC: true,
-		DSTINC: true,
+		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_ENABLE,
 		SIZE:   3,
 	})
 
 	d2 := dma.NewDescriptor(dma.DescriptorConfig{
 		SRC:    unsafe.Pointer(&source[0]),
 		DST:    unsafe.Pointer(&destination[8]),
-		SRCINC: true,
-		DSTINC: true,
+		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_ENABLE,
 		SIZE:   bufSize - 8,
 	})
 
