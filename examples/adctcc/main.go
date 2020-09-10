@@ -69,8 +69,8 @@ func timerInit() {
 		0<<sam.TC_COUNT32_CTRLA_ALOCK_Pos |
 		0<<sam.TC_COUNT32_CTRLA_PRESCSYNC_Pos |
 		0<<sam.TC_COUNT32_CTRLA_ONDEMAND_Pos |
-		0<<sam.TC_COUNT32_CTRLA_RUNSTDBY_Pos |
-		6<<sam.TC_COUNT32_CTRLA_PRESCALER_Pos |
+		1<<sam.TC_COUNT32_CTRLA_RUNSTDBY_Pos |
+		7<<sam.TC_COUNT32_CTRLA_PRESCALER_Pos |
 		2<<sam.TC_COUNT32_CTRLA_MODE_Pos | // Time Counter Mode : Counter in 32-bit mode
 		0)
 
@@ -94,8 +94,11 @@ func timerInit() {
 	// 1us
 	//sam.TC0_COUNT32.CC[0].Set(48)
 
+	// 1 sec : 48Mhz + PRESCALER x 1024
+	sam.TC0_COUNT32.CC[0].Set(46875 + 15)
+
 	// 1000 ms
-	sam.TC0_COUNT32.CC[0].Set(48 * 1000 * 1000)
+	//sam.TC0_COUNT32.CC[0].Set(48 * 1000 * 1000 * 2)
 	//sam.TC0_COUNT32.CC[0].Set(0xFFFFFFFF)
 
 	//hri_tc_write_EVCTRL_reg(
@@ -114,6 +117,17 @@ func timerInit() {
 		0<<sam.TC_COUNT32_EVCTRL_TCINV_Pos |
 		0<<sam.TC_COUNT32_EVCTRL_EVACT_Pos |
 		0)
+
+	sam.TC0_COUNT32.INTENCLR.Set(sam.TC_COUNT32_INTENCLR_MC1 | sam.TC_COUNT32_INTENCLR_MC0 | sam.TC_COUNT32_INTENCLR_ERR | sam.TC_COUNT32_INTENCLR_OVF)
+	sam.TC0_COUNT32.INTFLAG.Set(sam.TC_COUNT32_INTFLAG_MC1 | sam.TC_COUNT32_INTFLAG_MC0 | sam.TC_COUNT32_INTFLAG_ERR | sam.TC_COUNT32_INTFLAG_OVF)
+
+	//sam.TC0_COUNT32.INTENSET.Set(sam.TC_COUNT32_INTENSET_OVF)
+	//interrupt.New(sam.IRQ_TC0, func(intr interrupt.Interrupt) {
+	//	//sam.TC0_COUNT32.INTFLAG.Set(sam.TC_COUNT32_INTFLAG_MC1 | sam.TC_COUNT32_INTFLAG_MC0 | sam.TC_COUNT32_INTFLAG_ERR | sam.TC_COUNT32_INTFLAG_OVF)
+	//	sam.TC0_COUNT32.INTFLAG.Set(sam.TC_COUNT32_INTFLAG_OVF)
+	//	dbg5.Toggle()
+	//	return
+	//}).Enable()
 
 	//hri_tc_write_CTRLA_ENABLE_bit(TC0, 1 << TC_CTRLA_ENABLE_Pos); /* Enable: enabled */
 	sam.TC0_COUNT32.CTRLA.SetBits(sam.TC_COUNT32_CTRLA_ENABLE)
@@ -181,8 +195,7 @@ func main() {
 		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_ENABLE,
 		STEPSEL:  dma.DMAC_SRAM_BTCTRL_STEPSEL_DST,
 		BEATSIZE: dma.DMAC_SRAM_BTCTRL_BEATSIZE_HWORD,
-		//BLOCKACT: dma.DMAC_SRAM_BTCTRL_BLOCKACT_INT,
-		SIZE: 2,
+		SIZE:     2,
 		//SIZE: 2 * 8,
 	})
 	desc.AddDescriptor(desc)
@@ -205,7 +218,7 @@ func main() {
 		for bus.SYNCBUSY.HasBits(sam.ADC_SYNCBUSY_ENABLE) {
 		}
 
-		//bus.CTRLA.SetBits(sam.ADC_CTRLA_RUNSTDBY)
+		bus.CTRLA.SetBits(sam.ADC_CTRLA_RUNSTDBY)
 		bus.EVCTRL.SetBits(sam.ADC_EVCTRL_STARTEI)
 
 		// Enable ADC
