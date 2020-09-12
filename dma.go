@@ -69,7 +69,7 @@ func NewDMA(callback func(*DMA)) *DMA {
 		return nil
 	}
 
-	{
+	if nextDMAIndex == 0 {
 		// DMAC peripheral has not yet been initialized. Initialize it now.
 		// Init DMAC.
 		// First configure the clocks, then configure the DMA descriptors. Those
