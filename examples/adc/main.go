@@ -10,9 +10,6 @@ import (
 	dma "github.com/sago35/tinygo-dma"
 )
 
-// This example assumes that an analog sensor such as a rotary dial is connected to pin ADC0.
-// When the dial is turned past the midway point, the built-in LED will light up.
-
 func main() {
 	machine.InitADC()
 
