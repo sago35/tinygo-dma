@@ -4,6 +4,8 @@ package dma
 
 import (
 	"unsafe"
+
+	"github.com/sago35/tinygo-dma/align"
 )
 
 type DMADescriptor struct {
@@ -28,10 +30,12 @@ type DescriptorConfig struct {
 }
 
 func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
-	//go:align 16
-	var ret DMADescriptor
+	// Descriptors must live in SRAM and must be aligned on a 16-byte boundary.
+	slice := align.Make(16, 16)
+
+	ret := (*DMADescriptor)(unsafe.Pointer(&slice[0]))
 	ret.UpdateDescriptor(cfg)
-	return &ret
+	return ret
 }
 
 func (d *DMADescriptor) UpdateDescriptor(cfg DescriptorConfig) {
