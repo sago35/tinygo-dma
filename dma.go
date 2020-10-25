@@ -5,7 +5,6 @@ package dma
 import (
 	"device/sam"
 	"fmt"
-	"machine"
 	"runtime/interrupt"
 	"unsafe"
 )
@@ -32,11 +31,6 @@ var (
 	nextDMAIndex uint8
 	DMAChannels  [maxDMAchannels]DMA
 	dmaCallbacks [maxDMAchannels]func(*DMA)
-)
-
-var (
-	dbg5 = machine.D5
-	dbg6 = machine.D4
 )
 
 func init() {
