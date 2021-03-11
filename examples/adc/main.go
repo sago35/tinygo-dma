@@ -37,7 +37,7 @@ func main() {
 	desc.AddDescriptor(desc)
 
 	sensor := machine.ADC{Pin: machine.A0}
-	sensor.Configure()
+	sensor.Configure(machine.ADCConfig{})
 
 	bus := sam.ADC0
 	ch := 0
