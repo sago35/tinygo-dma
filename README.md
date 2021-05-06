@@ -1,3 +1,3 @@
 # tinygo-dma
 
-samd5x DMAC driver for TinyGo.
+samd5x / same5x DMAC driver for TinyGo.
