@@ -56,7 +56,8 @@ func main() {
 		SIZE:   3,
 	})
 
-	d2 := dma.NewDescriptor(dma.DescriptorConfig{
+	d2 := dma.NewDescriptor()
+	d2.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:    unsafe.Pointer(&source[0]),
 		DST:    unsafe.Pointer(&destination[8]),
 		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
@@ -65,8 +66,6 @@ func main() {
 	})
 
 	d1.AddDescriptor(d2)
-	fmt.Printf("d1: %p %#v\r\n", d1, d1)
-	fmt.Printf("d2: %p %#v\r\n", d2, d2)
 
 	for i := range source {
 		source[i] = 0xFF - byte(i)

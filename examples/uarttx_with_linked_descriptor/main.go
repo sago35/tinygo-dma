@@ -41,7 +41,7 @@ func main() {
 		from3[i] = byte(i) + 0x80
 	}
 
-	desc3 := dma.DMADescriptor{}
+	desc3 := dma.NewDescriptor()
 	desc3.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&from3[0]),
 		DST:      unsafe.Pointer(&uart.Bus.DATA.Reg),
@@ -51,7 +51,7 @@ func main() {
 		BLOCKACT: 1,
 	})
 
-	desc2 := dma.DMADescriptor{}
+	desc2 := dma.NewDescriptor()
 	desc2.UpdateDescriptor(dma.DescriptorConfig{
 		SRC:      unsafe.Pointer(&from2[0]),
 		DST:      unsafe.Pointer(&uart.Bus.DATA.Reg),
@@ -59,7 +59,7 @@ func main() {
 		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
 		SIZE:     uint32(len(from2)), // Total size of DMA transfer
 		BLOCKACT: 1,
-		DESC:     unsafe.Pointer(&desc3),
+		DESC:     unsafe.Pointer(desc3),
 	})
 
 	dmatx := dma.NewDMA(func(d *dma.DMA) {
@@ -77,7 +77,7 @@ func main() {
 		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
 		SIZE:     uint32(len(from)), // Total size of DMA transfer
 		BLOCKACT: 1,
-		DESC:     unsafe.Pointer(&desc2),
+		DESC:     unsafe.Pointer(desc2),
 	})
 
 	for {

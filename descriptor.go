@@ -30,13 +30,11 @@ type DescriptorConfig struct {
 	DESC     unsafe.Pointer
 }
 
-func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
+func NewDescriptor() *DMADescriptor {
 	// Descriptors must live in SRAM and must be aligned on a 16-byte boundary.
 	slice := align.Make(16, 16)
 
-	ret := (*DMADescriptor)(unsafe.Pointer(&slice[0]))
-	ret.UpdateDescriptor(cfg)
-	return ret
+	return (*DMADescriptor)(unsafe.Pointer(&slice[0]))
 }
 
 func (d *DMADescriptor) UpdateDescriptor(cfg DescriptorConfig) {
