@@ -27,6 +27,7 @@ type DescriptorConfig struct {
 	SIZE     uint32
 	SRC      unsafe.Pointer
 	DST      unsafe.Pointer
+	DESC     unsafe.Pointer
 }
 
 func NewDescriptor(cfg DescriptorConfig) *DMADescriptor {
@@ -75,6 +76,8 @@ func (d *DMADescriptor) UpdateDescriptor(cfg DescriptorConfig) {
 			d.dstaddr = uint32(uintptr(cfg.DST))
 		}
 	}
+
+	d.Descaddr = uint32(uintptr(cfg.DESC))
 }
 
 func (d *DMADescriptor) AddDescriptor(next *DMADescriptor) {
