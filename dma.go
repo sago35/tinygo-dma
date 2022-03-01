@@ -5,6 +5,7 @@ package dma
 import (
 	"device/sam"
 	"fmt"
+	"runtime"
 	"runtime/interrupt"
 	"unsafe"
 )
@@ -165,5 +166,12 @@ func (dma *DMA) Wait() {
 	//for !sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL) {
 	//}
 	//sam.DMAC.CHANNEL[dma.Channel].CHINTFLAG.SetBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL)
-	<-DMAChannels[dma.Channel].wait
+	for {
+		select {
+		case <-DMAChannels[dma.Channel].wait:
+			return
+		default:
+			runtime.Gosched()
+		}
+	}
 }
