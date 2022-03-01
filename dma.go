@@ -14,6 +14,7 @@ type DMA struct {
 	Channel       uint8
 	triggerSource uint8
 	triggerAction uint8
+	cmdOnStart    uint8
 	wait          chan bool
 }
 
@@ -126,6 +127,14 @@ func (dma *DMA) SetTriggerAction(triggerAction uint8) error {
 	return nil
 }
 
+func (dma *DMA) SetCmdOnStart(cmdOnStart uint8) error {
+	if sam.DMAC_CHANNEL_CHCTRLB_CMD_RESUME < cmdOnStart {
+		return fmt.Errorf("software Command must be smaller than 3")
+	}
+	dma.cmdOnStart = cmdOnStart
+	return nil
+}
+
 // Start starts DMA transfer.
 func (dma *DMA) Start() {
 	// Reset channel.
@@ -138,13 +147,17 @@ func (dma *DMA) Start() {
 	}
 
 	// Configure channel.
-	sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_SUSP | sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
+	sam.DMAC.CHANNEL[dma.Channel].CHINTENSET.SetBits(sam.DMAC_CHANNEL_CHINTENSET_TCMPL | sam.DMAC_CHANNEL_CHINTENSET_TERR)
+
+	sam.DMAC.CHANNEL[dma.Channel].CHEVCTRL.Set(sam.DMAC_CHANNEL_CHEVCTRL_EVOE | sam.DMAC_CHANNEL_CHEVCTRL_EVIE | sam.DMAC_CHANNEL_CHEVCTRL_EVACT_RESUME)
 
 	sam.DMAC.CHANNEL[dma.Channel].CHPRILVL.Set(0)
 
 	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.Set((uint32(dma.triggerSource) << sam.DMAC_CHANNEL_CHCTRLA_TRIGSRC_Pos) |
 		(uint32(dma.triggerAction) << sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_Pos) |
 		(sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_SINGLE << sam.DMAC_CHANNEL_CHCTRLA_BURSTLEN_Pos))
+
+	sam.DMAC.CHANNEL[dma.Channel].CHCTRLB.Set(dma.cmdOnStart)
 
 	sam.DMAC.CHANNEL[dma.Channel].CHCTRLA.SetBits(sam.DMAC_CHANNEL_CHCTRLA_ENABLE)
 }
