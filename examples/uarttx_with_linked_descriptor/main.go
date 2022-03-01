@@ -43,21 +43,23 @@ func main() {
 
 	desc3 := dma.NewDescriptor()
 	desc3.UpdateDescriptor(dma.DescriptorConfig{
-		SRC:    unsafe.Pointer(&from3[0]),
-		DST:    unsafe.Pointer(&uart.Bus.DATA.Reg),
-		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
-		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
-		SIZE:   uint32(len(from3)), // Total size of DMA transfer
+		SRC:      unsafe.Pointer(&from3[0]),
+		DST:      unsafe.Pointer(&uart.Bus.DATA.Reg),
+		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		SIZE:     uint32(len(from3)), // Total size of DMA transfer
+		BLOCKACT: dma.DMAC_SRAM_BTCTRL_BLOCKACT_NOACT,
 	})
 
 	desc2 := dma.NewDescriptor()
 	desc2.UpdateDescriptor(dma.DescriptorConfig{
-		SRC:    unsafe.Pointer(&from2[0]),
-		DST:    unsafe.Pointer(&uart.Bus.DATA.Reg),
-		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
-		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
-		SIZE:   uint32(len(from2)), // Total size of DMA transfer
-		DESC:   unsafe.Pointer(desc3),
+		SRC:      unsafe.Pointer(&from2[0]),
+		DST:      unsafe.Pointer(&uart.Bus.DATA.Reg),
+		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		SIZE:     uint32(len(from2)), // Total size of DMA transfer
+		BLOCKACT: dma.DMAC_SRAM_BTCTRL_BLOCKACT_BOTH,
+		DESC:     unsafe.Pointer(desc3),
 	})
 
 	dmatx := dma.NewDMA(func(d *dma.DMA) {
@@ -66,23 +68,38 @@ func main() {
 	})
 	dmatx.SetTrigger(dma.DMAC_CHANNEL_CHCTRLA_TRIGSRC_SERCOM5_TX)
 	dmatx.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BURST)
+	dmatx.SetCmdOnStart(sam.DMAC_CHANNEL_CHCTRLB_CMD_SUSPEND)
 
 	desc := dmatx.GetDescriptor()
 	desc.UpdateDescriptor(dma.DescriptorConfig{
-		SRC:    unsafe.Pointer(&from[0]),
-		DST:    unsafe.Pointer(&uart.Bus.DATA.Reg),
-		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
-		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
-		SIZE:   uint32(len(from)), // Total size of DMA transfer
-		DESC:   unsafe.Pointer(desc2),
+		SRC:      unsafe.Pointer(&from[0]),
+		DST:      unsafe.Pointer(&uart.Bus.DATA.Reg),
+		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		SIZE:     uint32(len(from)), // Total size of DMA transfer
+		BLOCKACT: dma.DMAC_SRAM_BTCTRL_BLOCKACT_BOTH,
+		DESC:     unsafe.Pointer(desc2),
 	})
 
 	for {
 		dbg5.Toggle()
 		s := time.Now()
 		dmatx.Start()
+
+		dmatx.Resume()
 		dbg6.Toggle()
 		dmatx.Wait()
+		time.Sleep(10 * time.Millisecond)
+
+		dmatx.Resume()
+		dbg6.Toggle()
+		dmatx.Wait()
+		time.Sleep(20 * time.Millisecond)
+
+		dmatx.Resume()
+		dbg6.Toggle()
+		dmatx.Wait()
+
 		e := time.Now()
 
 		fmt.Printf("tx : %#v %#v %#v\r\n", from, from2, from3)

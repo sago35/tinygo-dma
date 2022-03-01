@@ -167,6 +167,16 @@ func (dma *DMA) Trigger() {
 	sam.DMAC.SWTRIGCTRL.SetBits(1 << dma.Channel)
 }
 
+// Resume generates a DMA Channel resume operation command on correspond channel
+func (dma *DMA) Resume() {
+	sam.DMAC.CHANNEL[dma.Channel].CHCTRLB.Set(sam.DMAC_CHANNEL_CHCTRLB_CMD_RESUME)
+}
+
+// Suspend generates a DMA Channel suspend operation command on correspond channel
+func (dma *DMA) Suspend() {
+	sam.DMAC.CHANNEL[dma.Channel].CHCTRLB.Set(sam.DMAC_CHANNEL_CHCTRLB_CMD_SUSPEND)
+}
+
 func (dma *DMA) SetAction() {
 	// block beat transaction ...
 }
