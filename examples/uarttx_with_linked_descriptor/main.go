@@ -43,23 +43,21 @@ func main() {
 
 	desc3 := dma.NewDescriptor()
 	desc3.UpdateDescriptor(dma.DescriptorConfig{
-		SRC:      unsafe.Pointer(&from3[0]),
-		DST:      unsafe.Pointer(&uart.Bus.DATA.Reg),
-		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
-		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
-		SIZE:     uint32(len(from3)), // Total size of DMA transfer
-		BLOCKACT: 1,
+		SRC:    unsafe.Pointer(&from3[0]),
+		DST:    unsafe.Pointer(&uart.Bus.DATA.Reg),
+		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		SIZE:   uint32(len(from3)), // Total size of DMA transfer
 	})
 
 	desc2 := dma.NewDescriptor()
 	desc2.UpdateDescriptor(dma.DescriptorConfig{
-		SRC:      unsafe.Pointer(&from2[0]),
-		DST:      unsafe.Pointer(&uart.Bus.DATA.Reg),
-		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
-		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
-		SIZE:     uint32(len(from2)), // Total size of DMA transfer
-		BLOCKACT: 1,
-		DESC:     unsafe.Pointer(desc3),
+		SRC:    unsafe.Pointer(&from2[0]),
+		DST:    unsafe.Pointer(&uart.Bus.DATA.Reg),
+		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		SIZE:   uint32(len(from2)), // Total size of DMA transfer
+		DESC:   unsafe.Pointer(desc3),
 	})
 
 	dmatx := dma.NewDMA(func(d *dma.DMA) {
@@ -71,13 +69,12 @@ func main() {
 
 	desc := dmatx.GetDescriptor()
 	desc.UpdateDescriptor(dma.DescriptorConfig{
-		SRC:      unsafe.Pointer(&from[0]),
-		DST:      unsafe.Pointer(&uart.Bus.DATA.Reg),
-		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
-		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
-		SIZE:     uint32(len(from)), // Total size of DMA transfer
-		BLOCKACT: 1,
-		DESC:     unsafe.Pointer(desc2),
+		SRC:    unsafe.Pointer(&from[0]),
+		DST:    unsafe.Pointer(&uart.Bus.DATA.Reg),
+		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		SIZE:   uint32(len(from)), // Total size of DMA transfer
+		DESC:   unsafe.Pointer(desc2),
 	})
 
 	for {

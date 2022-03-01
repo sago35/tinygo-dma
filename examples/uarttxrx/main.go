@@ -51,7 +51,7 @@ func main() {
 		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
 		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
 		SIZE:     uint32(len(from)), // Total size of DMA transfer
-		BLOCKACT: 1,
+		BLOCKACT: dma.DMAC_SRAM_BTCTRL_BLOCKACT_NOACT,
 	})
 
 	dmarx := dma.NewDMA(func(d *dma.DMA) {
@@ -67,7 +67,7 @@ func main() {
 		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_DISABLE,
 		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_ENABLE,
 		SIZE:     uint32(len(to)), // Total size of DMA transfer
-		BLOCKACT: 1,
+		BLOCKACT: dma.DMAC_SRAM_BTCTRL_BLOCKACT_NOACT,
 	})
 
 	for {

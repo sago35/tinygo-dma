@@ -49,12 +49,11 @@ func main() {
 	dmatx.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BURST)
 
 	dmatx.GetDescriptor().UpdateDescriptor(dma.DescriptorConfig{
-		SRC:      unsafe.Pointer(&from[0]),
-		DST:      unsafe.Pointer(&spi0.Bus.DATA.Reg),
-		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
-		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
-		SIZE:     uint32(len(from)), // Total size of DMA transfer
-		BLOCKACT: 1,
+		SRC:    unsafe.Pointer(&from[0]),
+		DST:    unsafe.Pointer(&spi0.Bus.DATA.Reg),
+		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		SIZE:   uint32(len(from)), // Total size of DMA transfer
 	})
 
 	dmarx := dma.NewDMA(func(d *dma.DMA) {
@@ -65,12 +64,11 @@ func main() {
 	dmarx.SetTriggerAction(sam.DMAC_CHANNEL_CHCTRLA_TRIGACT_BURST)
 
 	dmarx.GetDescriptor().UpdateDescriptor(dma.DescriptorConfig{
-		SRC:      unsafe.Pointer(&spi0.Bus.DATA.Reg),
-		DST:      unsafe.Pointer(&to[0]),
-		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_DISABLE,
-		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_ENABLE,
-		SIZE:     uint32(len(to)), // Total size of DMA transfer
-		BLOCKACT: 1,
+		SRC:    unsafe.Pointer(&spi0.Bus.DATA.Reg),
+		DST:    unsafe.Pointer(&to[0]),
+		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_DISABLE,
+		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_ENABLE,
+		SIZE:   uint32(len(to)), // Total size of DMA transfer
 	})
 
 	for {

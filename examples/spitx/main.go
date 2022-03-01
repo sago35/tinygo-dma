@@ -49,12 +49,11 @@ func main() {
 
 	desc := dmatx.GetDescriptor()
 	desc.UpdateDescriptor(dma.DescriptorConfig{
-		SRC:      unsafe.Pointer(&from[0]),
-		DST:      unsafe.Pointer(&spi0.Bus.DATA.Reg),
-		SRCINC:   dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
-		DSTINC:   dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
-		SIZE:     uint32(len(from)), // Total size of DMA transfer
-		BLOCKACT: 1,
+		SRC:    unsafe.Pointer(&from[0]),
+		DST:    unsafe.Pointer(&spi0.Bus.DATA.Reg),
+		SRCINC: dma.DMAC_SRAM_BTCTRL_SRCINC_ENABLE,
+		DSTINC: dma.DMAC_SRAM_BTCTRL_DSTINC_DISABLE,
+		SIZE:   uint32(len(from)), // Total size of DMA transfer
 	})
 
 	for {
