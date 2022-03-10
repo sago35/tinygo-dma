@@ -54,7 +54,9 @@ func handleDMACInterrupt(intr interrupt.Interrupt) {
 	}
 	if sam.DMAC.CHANNEL[channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL) {
 		sam.DMAC.CHANNEL[channel].CHINTFLAG.Set(sam.DMAC_CHANNEL_CHINTFLAG_TCMPL)
-		dmaCallbacks[channel](&DMAChannels[channel])
+		if dmaCallbacks[channel] != nil {
+			dmaCallbacks[channel](&DMAChannels[channel])
+		}
 	}
 	if sam.DMAC.CHANNEL[channel].CHINTFLAG.HasBits(sam.DMAC_CHANNEL_CHINTFLAG_TERR) {
 		sam.DMAC.CHANNEL[channel].CHINTFLAG.Set(sam.DMAC_CHANNEL_CHINTFLAG_TERR)
