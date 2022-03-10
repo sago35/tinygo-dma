@@ -10,10 +10,10 @@ import (
 )
 
 type DMADescriptor struct {
-	btctrl   uint16
-	btcnt    uint16
-	srcaddr  uint32 //unsafe.Pointer
-	dstaddr  uint32 //unsafe.Pointer
+	Btctrl   uint16
+	Btcnt    uint16
+	Srcaddr  uint32 //unsafe.Pointer
+	Dstaddr  uint32 //unsafe.Pointer
 	Descaddr uint32 //unsafe.Pointer
 }
 
@@ -39,7 +39,7 @@ func NewDescriptor() *DMADescriptor {
 }
 
 func (d *DMADescriptor) UpdateDescriptor(cfg DescriptorConfig) {
-	d.btctrl = (1 << 0) | // VALID: Descriptor Valid
+	d.Btctrl = (1 << 0) | // VALID: Descriptor Valid
 		cfg.EVOSEL | // EVOSEL=DISABLE: Event Output Selection
 		cfg.BLOCKACT | // BLOCKACT=NOACT: Block Action
 		cfg.BEATSIZE | // BEATSIZE: Beat Size
@@ -47,32 +47,32 @@ func (d *DMADescriptor) UpdateDescriptor(cfg DescriptorConfig) {
 		cfg.DSTINC | // DSTINC: Destination Address Increment Enable
 		cfg.STEPSEL | // STEPSEL: Step Selection
 		cfg.STEPSIZE // STEPSIZE: Address Increment Step Size
-	d.btcnt = uint16(cfg.SIZE >> (uint16(cfg.BEATSIZE) >> DMAC_SRAM_BTCTRL_BEATSIZE_Pos))
+	d.Btcnt = uint16(cfg.SIZE >> (uint16(cfg.BEATSIZE) >> DMAC_SRAM_BTCTRL_BEATSIZE_Pos))
 	d.Descaddr = 0
 
 	if cfg.STEPSEL == (DMAC_SRAM_BTCTRL_STEPSEL_SRC >> DMAC_SRAM_BTCTRL_STEPSEL_Pos) {
 		// STEPSEL == SRC
 		if cfg.SRCINC == DMAC_SRAM_BTCTRL_SRCINC_ENABLE {
-			d.srcaddr = uint32(uintptr(cfg.SRC) + uintptr((cfg.SIZE)<<(uint32(cfg.STEPSIZE)>>DMAC_SRAM_BTCTRL_STEPSIZE_Pos)))
+			d.Srcaddr = uint32(uintptr(cfg.SRC) + uintptr((cfg.SIZE)<<(uint32(cfg.STEPSIZE)>>DMAC_SRAM_BTCTRL_STEPSIZE_Pos)))
 		} else {
-			d.srcaddr = uint32(uintptr(cfg.SRC))
+			d.Srcaddr = uint32(uintptr(cfg.SRC))
 		}
 		if cfg.DSTINC == DMAC_SRAM_BTCTRL_DSTINC_ENABLE {
-			d.dstaddr = uint32(uintptr(cfg.DST) + uintptr(cfg.SIZE))
+			d.Dstaddr = uint32(uintptr(cfg.DST) + uintptr(cfg.SIZE))
 		} else {
-			d.dstaddr = uint32(uintptr(cfg.DST))
+			d.Dstaddr = uint32(uintptr(cfg.DST))
 		}
 	} else {
 		// STEPSEL == DST
 		if cfg.SRCINC == DMAC_SRAM_BTCTRL_SRCINC_ENABLE {
-			d.srcaddr = uint32(uintptr(cfg.SRC) + uintptr(cfg.SIZE))
+			d.Srcaddr = uint32(uintptr(cfg.SRC) + uintptr(cfg.SIZE))
 		} else {
-			d.srcaddr = uint32(uintptr(cfg.SRC))
+			d.Srcaddr = uint32(uintptr(cfg.SRC))
 		}
 		if cfg.DSTINC == DMAC_SRAM_BTCTRL_DSTINC_ENABLE {
-			d.dstaddr = uint32(uintptr(cfg.DST) + uintptr((cfg.SIZE)<<(uint32(cfg.STEPSIZE)>>DMAC_SRAM_BTCTRL_STEPSIZE_Pos)))
+			d.Dstaddr = uint32(uintptr(cfg.DST) + uintptr((cfg.SIZE)<<(uint32(cfg.STEPSIZE)>>DMAC_SRAM_BTCTRL_STEPSIZE_Pos)))
 		} else {
-			d.dstaddr = uint32(uintptr(cfg.DST))
+			d.Dstaddr = uint32(uintptr(cfg.DST))
 		}
 	}
 
